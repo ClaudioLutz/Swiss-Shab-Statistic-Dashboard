@@ -27,17 +27,20 @@ def element_text(element):
 
 given_date = datetime.today().date() 
 end_date = given_date.replace(day=1)
-start_date = date(2019, 1, 1)
+start_date = date(2021, 10, 5)
 df=None
 data = []
 picklevar = "./dummy.pkl"
+xmlfolder = "./data"
 
 if os.path.isfile(picklevar) == True:
-    df = pd.read_pickle("./dummy.pkl")
+    df = pd.read_pickle(picklevar)
     df['date']= pd.to_datetime(df['date']).dt.date
     if df.date.min() <= (start_date + timedelta(days=3)) and df.date.max() >= (end_date - timedelta(days=3)):
         df = df[(df["date"] < end_date) | (df["date"] > start_date)]
     else:
+        if os.path.exists(xmlfolder) == False:
+            os.mkdir(xmlfolder)
         for single_date in daterange(start_date, end_date):
             date = single_date.strftime("%Y-%m-%d")
             pages=[0,1]
@@ -73,9 +76,56 @@ if os.path.isfile(picklevar) == True:
                 except Exception as e:
                     print('Failed process {0}: {1}', xmlfile,  str(e))
             
-        df = pd.DataFrame(data)
+        if not df is None: 
+            df=pd.concat([df, pd.DataFrame(data)],ignore_index=True)
+        else:
+            df = pd.DataFrame(data)
+
         df = df[(df["subrubric"] == "HR01") | (df["subrubric"] == "HR03")]
         df.to_pickle(picklevar)
+
+if os.path.isfile(picklevar) == False:
+    if os.path.exists(xmlfolder) == False:
+        os.mkdir(xmlfolder)
+    for single_date in daterange(start_date, end_date):
+        date = single_date.strftime("%Y-%m-%d")
+        pages=[0,1]
+        for page in pages: 
+            xmlfile= 'data\shab_'+date+'_'+str(page+1)+'.xml'
+            if os.path.isfile(xmlfile) != True:
+                url = 'https://amtsblattportal.ch/api/v1/publications/xml?publicationStates=PUBLISHED&tenant=shab&rubrics=HR&rubrics=KK&rubrics=LS&rubrics=NA&rubrics=SR&publicationDate.start='+date+'&publicationDate.end='+date+'&pageRequest.size=3000&pageRequest.sortOrders&pageRequest.page=' + str(page)
+                r = requests.get(url, allow_redirects=True)
+                open(xmlfile, 'wb').write(r.content)
+                
+    for single_date in daterange(start_date, end_date):
+        date = single_date.strftime("%Y-%m-%d")
+        pages=[0,1]            
+        for page in pages: 
+            xmlfile= 'data\shab_'+date+'_'+str(page+1)+'.xml'                
+            tree = ET.parse(xmlfile)
+            root = tree.getroot()
+
+            try:
+                for rls in root.findall('./publication/meta'):
+
+                    inner = {}
+                    inner['id'] = element_text(rls.find('id'))
+                    inner['date'] = element_text(rls.find('publicationDate'))
+                    inner['title'] = element_text(rls.find('title/de'))   
+                    inner['rubric'] = element_text(rls.find('rubric'))
+                    inner['subrubric'] = element_text(rls.find('subRubric'))   
+                    inner['publikations_status'] = element_text(rls.find('publicationState'))
+                    inner['primaryTenantCode'] = element_text(rls.find('primaryTenantCode'))            
+                    inner['kanton'] = element_text(rls.find('cantons'))  #AttributeError: 'NoneType' object has no attribute 'text'
+
+                    data.append(inner)
+            except Exception as e:
+                print('Failed process {0}: {1}', xmlfile,  str(e))
+        
+        df = pd.DataFrame(data)
+
+    df = df[(df["subrubric"] == "HR01") | (df["subrubric"] == "HR03")]
+    df.to_pickle(picklevar)
 
 HR03 = df[df["subrubric"] == 'HR03']
 HR03 = HR03[['date','subrubric','kanton']]
@@ -96,8 +146,6 @@ sns.lineplot(data=HR01_03, x="date", y="HR03",ax=ax)
 sns.lineplot(data=HR01_03, x="date", y="HR01",ax=ax)
 plt.legend(labels=["Löschungen","Neueintragungen"])
 ax.plot()
-
-
 
 
 # %%
