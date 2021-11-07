@@ -1,6 +1,6 @@
+# %%
 import xml.etree.ElementTree as ET
 import pandas as pd
-from pandas.tseries.offsets import BMonthEnd
 pd.options.mode.chained_assignment = None  # default='warn'
 from datetime import date, timedelta, datetime
 import requests
@@ -22,15 +22,10 @@ def element_text(element):
     else:
         return element.text
 
-
-d=date.today()
-offset = BMonthEnd()
-end_date = offset.rollback(d)
-start_date = date(2021, 3, 3)
-start_date = offset.rollback(start_date)
-start_date = start_date + timedelta(days=3)
+given_date = datetime.today().date() 
+end_date = given_date.replace(day=1)
+start_date = date(2020, 10, 1)
 data = []
-destCsvFile='complete_data.csv'
 
 for single_date in daterange(start_date, end_date):
     date = single_date.strftime("%Y-%m-%d")
@@ -41,7 +36,12 @@ for single_date in daterange(start_date, end_date):
             url = 'https://amtsblattportal.ch/api/v1/publications/xml?publicationStates=PUBLISHED&tenant=shab&rubrics=HR&rubrics=KK&rubrics=LS&rubrics=NA&rubrics=SR&publicationDate.start='+date+'&publicationDate.end='+date+'&pageRequest.size=3000&pageRequest.sortOrders&pageRequest.page=' + str(page)
             r = requests.get(url, allow_redirects=True)
             open(xmlfile, 'wb').write(r.content)
-                
+            
+for single_date in daterange(start_date, end_date):
+    date = single_date.strftime("%Y-%m-%d")
+    pages=[0,1]            
+    for page in pages: 
+        xmlfile= 'data\shab_'+date+'_'+str(page+1)+'.xml'                
         tree = ET.parse(xmlfile)
         root = tree.getroot()
 
@@ -63,7 +63,6 @@ for single_date in daterange(start_date, end_date):
             print('Failed process {0}: {1}', xmlfile,  str(e))
     
         df = pd.DataFrame(data)
-
-#df = df.iloc[: , 1:]
-df = df[(df["subrubric"] == "HR01") | (df["subrubric"] == "HR03")]
-print(df.count())
+        
+df = pd.DataFrame(data)
+df
