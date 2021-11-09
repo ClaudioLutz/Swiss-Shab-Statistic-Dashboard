@@ -27,20 +27,20 @@ def element_text(element):
 
 given_date = datetime.today().date() 
 end_date = given_date.replace(day=1)
-start_date = date(2021, 10, 5)
+start_date = date(2019, 1, 1)
 df=None
 data = []
 picklevar = "./dummy.pkl"
 xmlfolder = "./data"
+if os.path.exists(xmlfolder) == False:
+    os.mkdir(xmlfolder)
 
 if os.path.isfile(picklevar) == True:
     df = pd.read_pickle(picklevar)
     df['date']= pd.to_datetime(df['date']).dt.date
     if df.date.min() <= (start_date + timedelta(days=3)) and df.date.max() >= (end_date - timedelta(days=3)):
-        df = df[(df["date"] < end_date) | (df["date"] > start_date)]
+        df = df[(df["date"] <= end_date) & (df["date"] >= start_date)]
     else:
-        if os.path.exists(xmlfolder) == False:
-            os.mkdir(xmlfolder)
         for single_date in daterange(start_date, end_date):
             date = single_date.strftime("%Y-%m-%d")
             pages=[0,1]
@@ -85,8 +85,6 @@ if os.path.isfile(picklevar) == True:
         df.to_pickle(picklevar)
 
 if os.path.isfile(picklevar) == False:
-    if os.path.exists(xmlfolder) == False:
-        os.mkdir(xmlfolder)
     for single_date in daterange(start_date, end_date):
         date = single_date.strftime("%Y-%m-%d")
         pages=[0,1]
@@ -127,6 +125,12 @@ if os.path.isfile(picklevar) == False:
     df = df[(df["subrubric"] == "HR01") | (df["subrubric"] == "HR03")]
     df.to_pickle(picklevar)
 
+# %%
+print('1 '+str(len(df)))
+df.drop_duplicates()
+print('2 '+str(len(df)))
+# %%
+
 HR03 = df[df["subrubric"] == 'HR03']
 HR03 = HR03[['date','subrubric','kanton']]
 HR03['date'] = pd.to_datetime(df['date'])
@@ -149,3 +153,12 @@ ax.plot()
 
 
 # %%
+print('1 '+str(len(df)))
+df=df[(df["date"] <= end_date) & (df["date"] >= date(2021,8,1))]
+print('2 '+str(len(df)))
+# %%
+
+df.to_excel("output.xlsx")
+
+# %%
+
