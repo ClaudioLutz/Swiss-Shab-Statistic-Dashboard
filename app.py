@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import os
 import pickle
 
+
 def daterange(start_date, end_date):
     dates = []
     while start_date <= end_date:
@@ -15,11 +16,13 @@ def daterange(start_date, end_date):
         start_date += timedelta(days=1)
     return dates
 
+
 def element_text(element):
     if element is None:
         return '--'
     else:
         return element.text
+
 
 def Get_Shab_DF(download_date):
     pickles_folder = './shab_data'
@@ -27,7 +30,7 @@ def Get_Shab_DF(download_date):
         os.mkdir(pickles_folder)
     import_folder = './import'
     if os.path.exists(import_folder) == False:
-        os.mkdir(import_folder)    
+        os.mkdir(import_folder)
     download_date_str = download_date.strftime("%Y-%m-%d")
     pickle_file = pickles_folder + '/shab-' + download_date_str + '.pkl'
     if os.path.isfile(pickle_file):
@@ -76,25 +79,35 @@ def Get_Shab_DF(download_date):
         df.to_pickle(pickle_file)
         return df
 
+
 def Get_Shab_DF_from_range(from_date, to_date):
     df_Result = None
     main_pickle = './shab_data/last_df.pkl'
     if os.path.exists(main_pickle):
         df_Result = pd.read_pickle(main_pickle)
-        df_Result['date']= pd.to_datetime(df_Result['date']).dt.date
+        df_Result['date'] = pd.to_datetime(df_Result['date']).dt.date
+        # from_date and to_date are in range
         if df_Result.date.min() <= (from_date + timedelta(days=3)) and df_Result.date.max() >= (to_date - timedelta(days=3)):
-            df_Result = df_Result[(df_Result["date"] <= to_date) & (df_Result["date"] >= from_date)] 
+            df_Result = df_Result[(df_Result["date"] <= to_date) & (
+                df_Result["date"] >= from_date)]
             return df_Result
-        else:       
-            for date in daterange(from_date, to_date):
+        # from_date is out of range
+        if df_Result.date.min() > (from_date + timedelta(days=3)):
+            for date in daterange(from_date, df_Result.date.min()):
                 df = Get_Shab_DF(date)
-                if df_Result is None:
-                    df_Result = df
-                else:
-                    df_Result = pd.concat([df_Result, df], ignore_index=True)
+                df_Result = pd.concat([df_Result, df], ignore_index=True)
+            df_Result['date'] = pd.to_datetime(df_Result['date']).dt.date
             df_Result.to_pickle(main_pickle)
             return df_Result
-    else:       
+        # to_date is out of range
+        if df_Result.date.max() < (to_date - timedelta(days=3)):
+            for date in daterange(df_Result.date.max(), to_date):
+                df = Get_Shab_DF(date)
+                df_Result = pd.concat([df_Result, df], ignore_index=True)
+            df_Result['date'] = pd.to_datetime(df_Result['date']).dt.date
+            df_Result.to_pickle(main_pickle)
+            return df_Result
+    else:
         for date in daterange(from_date, to_date):
             df = Get_Shab_DF(date)
             if df_Result is None:
@@ -105,5 +118,6 @@ def Get_Shab_DF_from_range(from_date, to_date):
         return df_Result
 
 
-df = Get_Shab_DF_from_range(date(2018, 9, 1), date(2021, 10, 31))
+#df = Get_Shab_DF_from_range(date(2018, 8, 1), date(2021, 11, 10))
+#df
 # %%
