@@ -76,15 +76,34 @@ def Get_Shab_DF(download_date):
         df.to_pickle(pickle_file)
         return df
 
-
 def Get_Shab_DF_from_range(from_date, to_date):
     df_Result = None
-    for date in daterange(from_date, to_date):
-        df = Get_Shab_DF(date)
-        if df_Result is None:
-            df_Result = df
-        else:
-            df_Result = pd.concat([df_Result, df], ignore_index=True)
-    return df_Result
+    main_pickle = './shab_data/last_df.pkl'
+    if os.path.exists(main_pickle):
+        df_Result = pd.read_pickle(main_pickle)
+        df_Result['date']= pd.to_datetime(df_Result['date']).dt.date
+        if df_Result.date.min() <= (from_date + timedelta(days=3)) and df_Result.date.max() >= (to_date - timedelta(days=3)):
+            df_Result = df_Result[(df_Result["date"] <= to_date) & (df_Result["date"] >= from_date)] 
+            return df_Result
+        else:       
+            for date in daterange(from_date, to_date):
+                df = Get_Shab_DF(date)
+                if df_Result is None:
+                    df_Result = df
+                else:
+                    df_Result = pd.concat([df_Result, df], ignore_index=True)
+            df_Result.to_pickle(main_pickle)
+            return df_Result
+    else:       
+        for date in daterange(from_date, to_date):
+            df = Get_Shab_DF(date)
+            if df_Result is None:
+                df_Result = df
+            else:
+                df_Result = pd.concat([df_Result, df], ignore_index=True)
+        df_Result.to_pickle(main_pickle)
+        return df_Result
 
 
+df = Get_Shab_DF_from_range(date(2018, 9, 1), date(2021, 10, 31))
+# %%
