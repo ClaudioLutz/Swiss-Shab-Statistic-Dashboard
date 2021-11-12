@@ -9,7 +9,7 @@ from datetime import date, timedelta, datetime
 import pandas as pd
 
 
-df = Get_Shab_DF_from_range(date(2019, 1, 1), date(2021, 10, 31))
+df = Get_Shab_DF_from_range(date(2019, 8, 1), date(2021, 4, 30))
 
 HR03 = df[df["subrubric"] == 'HR03']
 HR03 = HR03[['date', 'subrubric', 'kanton']]
