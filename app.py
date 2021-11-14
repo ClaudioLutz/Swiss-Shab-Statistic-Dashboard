@@ -133,6 +133,11 @@ def FacetGridKanton(grouped_multiple, start, end):
 
     graphHR.savefig("./static/FacetGridKanton.png")
 
+def LineGraph(grouped_multiple_ohne_Kantone):
+    #fig, ax = plt.subplots(figsize=(20,6))
+    sns.lineplot(data=grouped_multiple_ohne_Kantone, x="month", y='count',hue='subrubric',figsize=(20,6))
+    plt.xticks(rotation=45)
+    plt.savefig("./static/LineGraph.png")
 
 def grouped_multiple(df):
     df.date = pd.to_datetime(df.date)
@@ -142,6 +147,13 @@ def grouped_multiple(df):
     grouped_multiple = grouped_multiple.reset_index()
     return grouped_multiple
 
+def grouped_multiple_ohne_Kantone(df):
+    df.date = pd.to_datetime(df.date)
+    df['month'] = df['date'].dt.strftime('%Y-%m')
+    grouped_multiple = df.groupby(['month','subrubric']).agg({'subrubric': ['count']})
+    grouped_multiple.columns = ['count']
+    grouped_multiple = grouped_multiple.reset_index()
+    return grouped_multiple
 
 
 
