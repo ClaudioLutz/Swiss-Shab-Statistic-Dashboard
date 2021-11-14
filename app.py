@@ -28,6 +28,9 @@ def Get_Shab_DF(download_date):
     import_folder = './import'
     if os.path.exists(import_folder) == False:
         os.mkdir(import_folder)
+    static_folder = './static'
+    if os.path.exists(static_folder) == False:
+        os.mkdir(static_folder)
     download_date_str = download_date.strftime("%Y-%m-%d")
     pickle_file = pickles_folder + '/shab-' + download_date_str + '.pkl'
     if os.path.isfile(pickle_file):
@@ -116,4 +119,46 @@ def Get_Shab_DF_from_range(from_date, to_date):
 #test
 #df = Get_Shab_DF_from_range(date(2020, 1, 1), date(2021, 10, 31))
 #df
+
+def FacetGridKanton(grouped_multiple, start, end):
+    graphHR = sns.FacetGrid(grouped_multiple, col="kanton", col_wrap=5,
+                        hue = "subrubric", sharey = False)
+    start = start
+    end = end
+    graphHR = (graphHR.map(sns.lineplot,"month","count")
+            .add_legend()
+            .set_axis_labels(str(start)+" - " + str(end),"Meldungen")
+            .set(xticklabels=[])
+            )
+
+    graphHR.savefig("./static/FacetGridKanton.png")
+
+def LineGraph(grouped_multiple_ohne_Kantone):
+    #fig, ax = plt.subplots(figsize=(20,6))
+    sns.lineplot(data=grouped_multiple_ohne_Kantone, x="month", y='count',hue='subrubric',figsize=(20,6))
+    plt.xticks(rotation=45)
+    plt.savefig("./static/LineGraph.png")
+
+def grouped_multiple(df):
+    df.date = pd.to_datetime(df.date)
+    df['month'] = df['date'].dt.strftime('%Y-%m')
+    grouped_multiple = df.groupby(['month','subrubric','kanton']).agg({'subrubric': ['count']})
+    grouped_multiple.columns = ['count']
+    grouped_multiple = grouped_multiple.reset_index()
+    return grouped_multiple
+
+def grouped_multiple_ohne_Kantone(df):
+    df.date = pd.to_datetime(df.date)
+    df['month'] = df['date'].dt.strftime('%Y-%m')
+    grouped_multiple = df.groupby(['month','subrubric']).agg({'subrubric': ['count']})
+    grouped_multiple.columns = ['count']
+    grouped_multiple = grouped_multiple.reset_index()
+    return grouped_multiple
+
+
+
+# %%
+
+
+
 # %%
