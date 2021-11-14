@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 import os
 import pickle
 
-
 def daterange(start_date, end_date):
     dates = []
     while start_date <= end_date:
@@ -16,13 +15,11 @@ def daterange(start_date, end_date):
         start_date += timedelta(days=1)
     return dates
 
-
 def element_text(element):
     if element is None:
         return '--'
     else:
         return element.text
-
 
 def Get_Shab_DF(download_date):
     pickles_folder = './shab_data'
@@ -79,7 +76,6 @@ def Get_Shab_DF(download_date):
         df.to_pickle(pickle_file)
         return df
 
-
 def Get_Shab_DF_from_range(from_date, to_date):
     df_Result = None
     main_pickle = './shab_data/last_df.pkl'
@@ -117,7 +113,7 @@ def Get_Shab_DF_from_range(from_date, to_date):
         df_Result.to_pickle(main_pickle)
         return df_Result
 
-
-#df = Get_Shab_DF_from_range(date(2018, 8, 1), date(2021, 11, 10))
+#test
+#df = Get_Shab_DF_from_range(date(2020, 1, 1), date(2021, 10, 31))
 #df
 # %%
