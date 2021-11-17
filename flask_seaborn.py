@@ -22,10 +22,11 @@ FacetGridKanton(grouped_multiples,start_date,end_date)
 
 grouped_multiple_ohne_Kanton = grouped_multiple_ohne_Kantone(df)
 
-#LineGraph(grouped_multiple_ohne_Kantone)
-
 fig, ax = plt.subplots(figsize=(20,6))
 ax=sns.set_style(style='darkgrid')
+sns.lineplot(data=grouped_multiple_ohne_Kanton, x="month", y='count',hue='subrubric')
+plt.xticks(rotation=60)
+plt.savefig("./static/LineGraph.png")
 
 app = Flask(__name__)
 
@@ -35,11 +36,4 @@ def home():
 
 @app.route("/visualize")
 def visualize():
-    sns.lineplot(data=grouped_multiple_ohne_Kanton, x="month", y='count',hue='subrubric',ax=ax)
-    plt.xticks(rotation=45)
-    plt.plot()
-    canvas = FigureCanvas(fig)
-    img=io.BytesIO()
-    fig.savefig(img)
-    img.seek(0)
-    return send_file(img,mimetype='img/png')
+    return None
