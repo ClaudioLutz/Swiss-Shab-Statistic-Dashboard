@@ -87,7 +87,7 @@ def Get_Shab_DF(download_date):
         df.to_pickle(pickle_file)
         return df
 
-def Get_Shab_DF_from_range(from_date, to_date):
+def Get_Shab_DF_from_range(from_date, to_date, progress_callback=None):
     df_Result = None
     main_pickle = './shab_data/last_df.pkl'
     if os.path.exists(main_pickle):
@@ -105,6 +105,8 @@ def Get_Shab_DF_from_range(from_date, to_date):
             dates_to_fetch = daterange(from_date, df_Result.date.min())
             logger.info(f"Need to fetch {len(dates_to_fetch)} days of historical data...")
             for i, date in enumerate(dates_to_fetch):
+                if progress_callback:
+                    progress_callback(i + 1, len(dates_to_fetch), f"Fetching historical data for {date}")
                 if i % 10 == 0:
                     logger.info(f"Progress: {i}/{len(dates_to_fetch)} days fetched")
                 df = Get_Shab_DF(date)
@@ -118,6 +120,8 @@ def Get_Shab_DF_from_range(from_date, to_date):
             dates_to_fetch = daterange(df_Result.date.max(), to_date)
             logger.info(f"Need to fetch {len(dates_to_fetch)} days of recent data...")
             for i, date in enumerate(dates_to_fetch):
+                if progress_callback:
+                    progress_callback(i + 1, len(dates_to_fetch), f"Fetching recent data for {date}")
                 if i % 10 == 0:
                     logger.info(f"Progress: {i}/{len(dates_to_fetch)} days fetched")
                 df = Get_Shab_DF(date)
@@ -130,6 +134,8 @@ def Get_Shab_DF_from_range(from_date, to_date):
         dates_to_fetch = daterange(from_date, to_date)
         logger.info(f"No cached data found. Fetching {len(dates_to_fetch)} days of data from scratch...")
         for i, date in enumerate(dates_to_fetch):
+            if progress_callback:
+                progress_callback(i + 1, len(dates_to_fetch), f"Fetching initial data for {date}")
             if i % 10 == 0:
                 logger.info(f"Progress: {i}/{len(dates_to_fetch)} days fetched")
             df = Get_Shab_DF(date)
