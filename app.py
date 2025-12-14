@@ -7,6 +7,11 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import os
 import pickle
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 def daterange(start_date, end_date):
     dates = []
@@ -34,8 +39,10 @@ def Get_Shab_DF(download_date):
     download_date_str = download_date.strftime("%Y-%m-%d")
     pickle_file = pickles_folder + '/shab-' + download_date_str + '.pkl'
     if os.path.isfile(pickle_file):
+        logger.debug(f"Using cached data for {download_date_str}")
         return pd.read_pickle(pickle_file)
     else:
+        logger.info(f"Downloading data for {download_date_str}...")
         data = []
         pages = [0, 1]
         for page in pages:
@@ -46,6 +53,7 @@ def Get_Shab_DF(download_date):
                 download_date_str+'&publicationDate.end='+download_date_str + \
                 '&pageRequest.size=3000&pageRequest.sortOrders&pageRequest.page=' + \
                 str(page)
+            logger.debug(f"Fetching page {page+1} for {download_date_str}")
             r = requests.get(url, allow_redirects=True)
             open(xmlfile, 'wb').write(r.content)
 
@@ -83,37 +91,54 @@ def Get_Shab_DF_from_range(from_date, to_date):
     df_Result = None
     main_pickle = './shab_data/last_df.pkl'
     if os.path.exists(main_pickle):
+        logger.info("Found cached dataset, checking date range...")
         df_Result = pd.read_pickle(main_pickle)
         df_Result['date'] = pd.to_datetime(df_Result['date']).dt.date
         # from_date and to_date are in range
         if df_Result.date.min() <= (from_date + timedelta(days=3)) and df_Result.date.max() >= (to_date - timedelta(days=3)):
+            logger.info(f"Using cached data (covers {df_Result.date.min()} to {df_Result.date.max()})")
             df_Result = df_Result[(df_Result["date"] <= to_date) & (
                 df_Result["date"] >= from_date)]
             return df_Result
         # from_date is out of range
         if df_Result.date.min() > (from_date + timedelta(days=3)):
-            for date in daterange(from_date, df_Result.date.min()):
+            dates_to_fetch = daterange(from_date, df_Result.date.min())
+            logger.info(f"Need to fetch {len(dates_to_fetch)} days of historical data...")
+            for i, date in enumerate(dates_to_fetch):
+                if i % 10 == 0:
+                    logger.info(f"Progress: {i}/{len(dates_to_fetch)} days fetched")
                 df = Get_Shab_DF(date)
                 df_Result = pd.concat([df_Result, df], ignore_index=True)
             df_Result['date'] = pd.to_datetime(df_Result['date']).dt.date
             df_Result.to_pickle(main_pickle)
+            logger.info("Historical data fetch complete")
             return df_Result
         # to_date is out of range
         if df_Result.date.max() < (to_date - timedelta(days=3)):
-            for date in daterange(df_Result.date.max(), to_date):
+            dates_to_fetch = daterange(df_Result.date.max(), to_date)
+            logger.info(f"Need to fetch {len(dates_to_fetch)} days of recent data...")
+            for i, date in enumerate(dates_to_fetch):
+                if i % 10 == 0:
+                    logger.info(f"Progress: {i}/{len(dates_to_fetch)} days fetched")
                 df = Get_Shab_DF(date)
                 df_Result = pd.concat([df_Result, df], ignore_index=True)
             df_Result['date'] = pd.to_datetime(df_Result['date']).dt.date
             df_Result.to_pickle(main_pickle)
+            logger.info("Recent data fetch complete")
             return df_Result
     else:
-        for date in daterange(from_date, to_date):
+        dates_to_fetch = daterange(from_date, to_date)
+        logger.info(f"No cached data found. Fetching {len(dates_to_fetch)} days of data from scratch...")
+        for i, date in enumerate(dates_to_fetch):
+            if i % 10 == 0:
+                logger.info(f"Progress: {i}/{len(dates_to_fetch)} days fetched")
             df = Get_Shab_DF(date)
             if df_Result is None:
                 df_Result = df
             else:
                 df_Result = pd.concat([df_Result, df], ignore_index=True)
         df_Result.to_pickle(main_pickle)
+        logger.info(f"Initial data fetch complete! Total records: {len(df_Result)}")
         return df_Result
 
 #test
