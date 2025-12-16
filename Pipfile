@@ -10,6 +10,7 @@ requests = "*"
 seaborn = "*"
 matplotlib = "*"
 flask = "*"
+pyarrow = "*"
 
 [dev-packages]
 

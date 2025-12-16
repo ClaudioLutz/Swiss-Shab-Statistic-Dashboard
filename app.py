@@ -92,7 +92,14 @@ def Get_Shab_DF_from_range(from_date, to_date, progress_callback=None):
     main_pickle = './shab_data/last_df.pkl'
     if os.path.exists(main_pickle):
         logger.info("Found cached dataset, checking date range...")
-        df_Result = pd.read_pickle(main_pickle)
+        try:
+            df_Result = pd.read_pickle(main_pickle)
+        except Exception as e:
+            logger.warning(f"Error reading cache file {main_pickle}: {e}")
+            logger.warning("Deleting corrupted cache file and restarting download.")
+            os.remove(main_pickle)
+            return Get_Shab_DF_from_range(from_date, to_date, progress_callback)
+
         df_Result['date'] = pd.to_datetime(df_Result['date']).dt.date
         # from_date and to_date are in range
         if df_Result.date.min() <= (from_date + timedelta(days=3)) and df_Result.date.max() >= (to_date - timedelta(days=3)):
