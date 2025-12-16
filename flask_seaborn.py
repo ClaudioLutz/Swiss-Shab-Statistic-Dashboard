@@ -1,3 +1,7 @@
+import os
+# Fix for PyArrow/Pandas compatibility issue - must be set before importing pandas
+os.environ["PYARROW_IGNORE_TIMEZONE"] = "1"
+
 from flask import Flask, send_file, render_template, jsonify
 import io
 import base64
@@ -8,7 +12,6 @@ from app import Get_Shab_DF_from_range, grouped_multiple, FacetGridKanton, group
 from datetime import date, time, timedelta, datetime
 from dateutil.relativedelta import relativedelta
 import pandas as pd
-import os
 import logging
 import threading
 

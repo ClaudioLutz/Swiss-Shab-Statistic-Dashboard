@@ -4,14 +4,16 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-pandas = "*"
+pandas = ">=2.0.0,<3.0.0"
 datetime = "*"
 requests = "*"
 seaborn = "*"
 matplotlib = "*"
 flask = "*"
+pyarrow = ">=14.0.0,<18.0.0"
+python-dateutil = "*"
 
 [dev-packages]
 
 [requires]
-python_version = "3.9"
+python_version = "3.13"

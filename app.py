@@ -1,4 +1,8 @@
 # %%
+import os
+# Fix for PyArrow/Pandas compatibility issue - must be set before importing pandas
+os.environ["PYARROW_IGNORE_TIMEZONE"] = "1"
+
 import xml.etree.ElementTree as ET
 import pandas as pd
 from datetime import date, timedelta, datetime
@@ -7,7 +11,6 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import seaborn as sns
 import matplotlib.pyplot as plt
-import os
 import pickle
 import logging
 import io
