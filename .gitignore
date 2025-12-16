@@ -1,10 +1,6 @@
-# Cache and Data
 shab_data/
 import/
 static/*.png
-
-# Python
 __pycache__/
-*.py[cod]
-*$py.class
 *.pkl
+*.parquet
