@@ -5,7 +5,7 @@ A Flask-based application that retrieves, analyzes, and visualizes data from the
 ## Features
 
 - **Automated Data Retrieval**: Downloads daily publication data (XML) directly from the SHAB API.
-- **Efficient Data Caching**: Parsed data is stored in local pickle files (`.pkl`) to minimize network requests and accelerate subsequent runs.
+- **Efficient Data Caching**: Parsed data is stored in local Parquet files (`.parquet`) using PyArrow to minimize network requests and accelerate subsequent runs.
 - **Interactive Visualizations**:
   - **Trend Analysis**: A line graph displaying the volume of new entries vs. deletions over time.
   - **Geographic Breakdown**: A facet grid showing publication trends broken down by canton.
@@ -13,7 +13,7 @@ A Flask-based application that retrieves, analyzes, and visualizes data from the
 
 ## Prerequisites
 
-- **Python**: Version 3.9
+- **Python**: Version 3.13
 - **Pipenv**: For dependency management. [Install Pipenv](https://pipenv.pypa.io/en/latest/installation/) if you haven't already.
 
 ## Installation
@@ -51,22 +51,26 @@ A Flask-based application that retrieves, analyzes, and visualizes data from the
 
 ## Project Structure
 
-- **`flask_seaborn.py`**: The entry point for the Flask application. It triggers the data loading/processing pipeline and serves the web page.
+- **`flask_seaborn.py`**: The entry point for the Flask application. It triggers the data loading/processing pipeline and serves the web page. It also sets the `PYARROW_IGNORE_TIMEZONE` environment variable to ensure compatibility between Pandas and PyArrow.
 - **`app.py`**: Contains the core logic for:
     - Downloading XML data from the SHAB API.
     - Parsing and filtering data (HR01/HR03).
-    - Managing the local cache (pickle files).
+    - Managing the local cache (Parquet files).
     - Generating Seaborn/Matplotlib plots.
+- **`bfs_pxweb.py`**: A utility module for fetching enterprise data (UDEMO) from the Swiss Federal Statistical Office (BFS) PxWeb API. It handles querying, caching, and parsing JSON-STAT2 responses.
 - **`templates/visualisation.html`**: The HTML template for the dashboard.
 - **`static/`**: Directory where generated plots (`LineGraph.png`, `FacetGridKanton.png`) are saved and served from.
-- **`shab_data/`**: Local cache directory storing processed DataFrames.
+- **`shab_data/`**: Local cache directory storing processed DataFrames as Parquet files.
 - **`import/`**: Temporary directory used during the download of XML files.
+- **`test_fix.py`**: A script to verify the Pandas and PyArrow environment configuration and ensure the `PYARROW_IGNORE_TIMEZONE` fix is working correctly.
 
 ## Data Source
 
 This application uses data provided by the **Swiss Official Gazette of Commerce (SHAB)** via their [Amtsblattportal](https://amtsblattportal.ch). It specifically filters for:
 - **HR01**: Neueintragungen (New Entries)
 - **HR03**: Löschungen (Deletions)
+
+Additionally, the `bfs_pxweb.py` module allows for fetching supplemental statistical data from the **Swiss Federal Statistical Office (BFS)**.
 
 ## Contributing
 
