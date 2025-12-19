@@ -14,16 +14,22 @@ The primary workflow is:
 - pipenv
 
 ### Install
+```bash
 pipenv --python 3.11
 pipenv install
+```
 
 ### Refresh data and generate artifacts
+```bash
 pipenv run python refresh_data.py
+```
 
 ### Run the dashboard
+```bash
 pipenv run python flask_seaborn.py
 # or:
 # pipenv run flask --app flask_seaborn run
+```
 
 ## Generated artifacts
 
@@ -42,7 +48,7 @@ The Flask app serves these artifacts and does not download/process SHAB data dur
 ## Features
 
 - **Automated Data Retrieval**: Downloads daily publication data (XML) directly from the SHAB API.
-- **Efficient Data Caching**: Parsed data is stored in local pickle files (`.pkl`) to minimize network requests and accelerate subsequent runs.
+- **Efficient Data Caching**: Parsed data is stored in local parquet files to minimize network requests and accelerate subsequent runs.
 - **Interactive Visualizations**:
   - **Trend Analysis**: A line graph displaying the volume of new entries vs. deletions over time.
   - **Geographic Breakdown**: A facet grid showing publication trends broken down by canton.
@@ -57,6 +63,7 @@ The Flask app serves these artifacts and does not download/process SHAB data dur
 - **`static/`**: Directory where generated plots (`LineGraph.png`, `FacetGridKanton.png`) are saved and served from.
 - **`shab_data/`**: Local cache directory storing processed DataFrames (Parquet).
 - **`parquet_utils.py`**: Utilities for safe Parquet operations and file locking.
+- **`bfs_pxweb.py`**: Module for interacting with the BFS PxWeb API.
 
 ## Data Source
 

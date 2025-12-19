@@ -70,11 +70,15 @@ def main():
                 years = sorted(shab_year_canton["year"].unique().tolist())
 
                 # Fetch BFS data
-                df_bfs = fetch_udemo(
-                    observation_text="Unternehmensneugründungen",
-                    years=years,
-                    canton_abbrs=None
-                )
+                try:
+                    df_bfs = fetch_udemo(
+                        observation_text="Unternehmensneugründungen",
+                        years=years,
+                        canton_abbrs=None
+                    )
+                except Exception as e:
+                    logger.error(f"BFS fetch failed, proceeding without BFS data: {e}")
+                    df_bfs = pd.DataFrame()
 
                 if not df_bfs.empty:
                      # df_bfs columns: Beobachtungseinheit, Kanton, Rechtsform, Jahr, value

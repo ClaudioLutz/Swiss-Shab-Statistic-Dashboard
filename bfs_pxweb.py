@@ -120,7 +120,7 @@ def fetch_udemo(observation_text="Unternehmensneugründungen", years=None, canto
 
     # Let's try to get metadata first to be robust.
     try:
-        r_meta = requests.get(api_url)
+        r_meta = requests.get(api_url, timeout=(10, 30))
         r_meta.raise_for_status()
         metadata = r_meta.json()
 
@@ -242,7 +242,7 @@ def fetch_udemo(observation_text="Unternehmensneugründungen", years=None, canto
         }
 
         # POST request
-        r_data = requests.post(api_url, json=payload)
+        r_data = requests.post(api_url, json=payload, timeout=(10, 30))
         r_data.raise_for_status()
 
         result = r_data.json()
