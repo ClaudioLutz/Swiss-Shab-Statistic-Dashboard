@@ -5,6 +5,9 @@ Handles PyArrow extension type registration issues and provides atomic write ope
 """
 
 import os
+# Must be set before any pandas/pyarrow imports in the main modules
+os.environ["PYARROW_IGNORE_TIMEZONE"] = "1"
+
 import pandas as pd
 import pyarrow as pa
 import logging
@@ -20,8 +23,6 @@ if sys.platform == 'win32':
 else:
     import fcntl
 
-# Must be set before any pandas/pyarrow imports in the main modules
-os.environ["PYARROW_IGNORE_TIMEZONE"] = "1"
 
 logger = logging.getLogger(__name__)
 

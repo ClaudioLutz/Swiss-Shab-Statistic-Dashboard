@@ -19,6 +19,18 @@
     <title>Shab-Statistik</title>
 </head>
 <body>
+    <div id="refresh-status" style="margin: 20px; font-size: 1.1em; text-align: center;"></div>
+    <script>
+    fetch("/api/status")
+      .then(r => r.json())
+      .then(s => {
+        const el = document.getElementById("refresh-status");
+        el.textContent = s.last_refresh
+          ? `Last refresh: ${s.last_refresh} (rows: ${s.records ?? "n/a"})`
+          : (s.message || "Status unavailable");
+      })
+      .catch(() => {});
+    </script>
     <img class="form" src="{{ url_for('static', filename='LineGraph.png') }}" alt="Line Graph">
     <img class="form" src="{{ url_for('static', filename='FacetGridKanton.png') }}" alt="Facet Grid">
 </body>
