@@ -50,16 +50,13 @@ The Flask app serves these artifacts and does not download/process SHAB data dur
 
 ## Project Structure
 
-- **`flask_seaborn.py`**: The entry point for the Flask application. It triggers the data loading/processing pipeline and serves the web page.
-- **`app.py`**: Contains the core logic for:
-    - Downloading XML data from the SHAB API.
-    - Parsing and filtering data (HR01/HR03).
-    - Managing the local cache (pickle files).
-    - Generating Seaborn/Matplotlib plots.
+- **`refresh_data.py`**: The CLI entry point for data orchestrator (download, process, plot).
+- **`flask_seaborn.py`**: The entry point for the Flask application. Serves the web page.
+- **`app.py`**: Contains the core logic for downloading and parsing SHAB data.
 - **`templates/visualisation.html`**: The HTML template for the dashboard.
 - **`static/`**: Directory where generated plots (`LineGraph.png`, `FacetGridKanton.png`) are saved and served from.
-- **`shab_data/`**: Local cache directory storing processed DataFrames.
-- **`import/`**: Temporary directory used during the download of XML files.
+- **`shab_data/`**: Local cache directory storing processed DataFrames (Parquet).
+- **`parquet_utils.py`**: Utilities for safe Parquet operations and file locking.
 
 ## Data Source
 
