@@ -10,7 +10,7 @@ requests = "*"
 seaborn = "*"
 matplotlib = "*"
 flask = "*"
-pyarrow = ">=14.0.0,<18.0.0"
+pyarrow = ">=22.0.0,<23.0.0"
 python-dateutil = "*"
 
 [dev-packages]

@@ -15,6 +15,9 @@ import pickle
 import logging
 import io
 
+# Import safe parquet utilities to handle PyArrow extension type registration issues
+from parquet_utils import safe_read_parquet, safe_write_parquet
+
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -57,7 +60,7 @@ def Get_Shab_DF(download_date):
 
     if os.path.isfile(parquet_file):
         logger.debug(f"Using cached data for {download_date_str}")
-        return pd.read_parquet(parquet_file)
+        return safe_read_parquet(parquet_file)
     else:
         logger.info(f"Downloading data for {download_date_str}...")
         data = []
@@ -115,7 +118,7 @@ def Get_Shab_DF(download_date):
         if not df.empty and 'date' in df.columns:
             df['date'] = pd.to_datetime(df['date'])
 
-        df.to_parquet(parquet_file)
+        safe_write_parquet(df, parquet_file)
         return df
 
 def Get_Shab_DF_from_range(from_date, to_date, progress_callback=None):
@@ -124,7 +127,7 @@ def Get_Shab_DF_from_range(from_date, to_date, progress_callback=None):
 
     if os.path.exists(main_parquet):
         logger.info("Found cached dataset, checking date range...")
-        df_Result = pd.read_parquet(main_parquet)
+        df_Result = safe_read_parquet(main_parquet)
         # Ensure date is datetime64 for processing, then convert to date for comparisons
         df_Result['date'] = pd.to_datetime(df_Result['date'])
 
@@ -180,7 +183,7 @@ def Get_Shab_DF_from_range(from_date, to_date, progress_callback=None):
         # Keep as datetime64 before saving to Parquet
         if not df_Result.empty:
             df_Result['date'] = pd.to_datetime(df_Result['date'])
-            df_Result.to_parquet(main_parquet)
+            safe_write_parquet(df_Result, main_parquet)
 
         # Filter again to return only requested range
         df_Result = df_Result[(df_Result["date"] <= pd.to_datetime(to_date)) & (
@@ -208,7 +211,7 @@ def Get_Shab_DF_from_range(from_date, to_date, progress_callback=None):
                 df_Result = df_Result.drop_duplicates(subset=['id'])
              # Ensure date is datetime64
              df_Result['date'] = pd.to_datetime(df_Result['date'])
-             df_Result.to_parquet(main_parquet)
+             safe_write_parquet(df_Result, main_parquet)
 
         logger.info(f"Initial data fetch complete! Total records: {len(df_Result) if df_Result is not None else 0}")
         return df_Result
