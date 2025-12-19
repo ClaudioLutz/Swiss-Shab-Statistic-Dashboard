@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Downloading Data...</title>
+    <title>Status</title>
     <style>
         body {
             font-family: 'Open Sans', sans-serif;
@@ -26,37 +26,12 @@
         h1 {
             margin-bottom: 20px;
         }
-        .progress-container {
-            width: 100%;
-            background-color: #333;
-            border-radius: 10px;
-            overflow: hidden;
-            margin-bottom: 10px;
-        }
-        .progress-bar {
-            width: 0%;
-            height: 30px;
-            background-color: #4CAF50;
-            text-align: center;
-            line-height: 30px;
-            color: white;
-            transition: width 0.5s;
-        }
-        .status-text {
-            color: #ccc;
-            margin-top: 10px;
-        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Preparing Data...</h1>
-        <p>We are downloading and processing the latest data. This may take a while.</p>
-
-        <div class="progress-container">
-            <div id="progress-bar" class="progress-bar">0%</div>
-        </div>
-        <div id="status-text" class="status-text">Initializing...</div>
+        <h1>Status</h1>
+        <p id="server-message">{{ message }}</p>
     </div>
 
     <script>
@@ -64,31 +39,11 @@
             fetch('/progress')
                 .then(response => response.json())
                 .then(data => {
-                    const progressBar = document.getElementById('progress-bar');
-                    const statusText = document.getElementById('status-text');
-
-                    if (data.state === 'complete') {
-                        progressBar.style.width = '100%';
-                        progressBar.innerHTML = '100%';
-                        statusText.innerHTML = 'Done! Redirecting...';
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 1000);
-                    } else if (data.state === 'error') {
-                        statusText.innerHTML = 'Error: ' + data.message;
-                        progressBar.style.backgroundColor = 'red';
+                    if (data.status === 'complete') {
+                        window.location.reload();
                     } else {
-                        // processing or downloading
-                        let percentage = 0;
-                        if (data.total > 0) {
-                            percentage = Math.round((data.current / data.total) * 100);
-                        }
-                        progressBar.style.width = percentage + '%';
-                        progressBar.innerHTML = percentage + '%';
-                        statusText.innerHTML = data.message;
-
                         // Poll again
-                        setTimeout(checkProgress, 1000);
+                        setTimeout(checkProgress, 2000);
                     }
                 })
                 .catch(err => {
@@ -97,7 +52,7 @@
                 });
         }
 
-        // Start polling
+        // Start polling to auto-reload when ready
         checkProgress();
     </script>
 </body>

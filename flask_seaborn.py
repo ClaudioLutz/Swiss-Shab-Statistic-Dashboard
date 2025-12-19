@@ -5,7 +5,6 @@ os.environ["PYARROW_IGNORE_TIMEZONE"] = "1"
 
 import json
 import logging
-import json
 from flask import Flask, render_template, jsonify, send_from_directory, url_for
 import pandas as pd
 from parquet_utils import safe_read_parquet
@@ -70,17 +69,17 @@ def progress():
     
     if data_ready:
         return jsonify({
-            'state': 'complete',
-            'message': 'Data is ready!',
-            'current': 100,
-            'total': 100
+            'status': 'complete',
+            'message': 'Ready',
+            'current': 1,
+            'total': 1
         })
     else:
         return jsonify({
-            'state': 'processing',
-            'message': 'Use python refresh_data.py to update data.',
+            'status': 'missing',
+            'message': 'Run refresh_data.py',
             'current': 0,
-            'total': 100
+            'total': 1
         })
 
 if __name__ == "__main__":
