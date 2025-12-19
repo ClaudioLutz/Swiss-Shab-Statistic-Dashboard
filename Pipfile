@@ -5,15 +5,15 @@ name = "pypi"
 
 [packages]
 pandas = ">=2.0.0,<3.0.0"
-datetime = "*"
 requests = "*"
 seaborn = "*"
 matplotlib = "*"
 flask = "*"
-pyarrow = ">=22.0.0,<23.0.0"
+pyarrow = ">=22.0.0"
 python-dateutil = "*"
 
 [dev-packages]
+pytest = "*"
 
 [requires]
-python_version = "3.13"
+python_version = "3.11"
