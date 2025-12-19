@@ -23,6 +23,7 @@ if sys.platform == 'win32':
 else:
     import fcntl
 
+
 logger = logging.getLogger(__name__)
 
 # Track if we've already attempted to handle the extension types

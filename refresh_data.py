@@ -14,6 +14,8 @@ from plots import generate_plots
 from parquet_utils import acquire_lock, safe_write_parquet_atomic
 from logging_setup import configure_logging
 
+from logging_setup import configure_logging
+
 logger = logging.getLogger("refresh_data")
 
 SHAB_DATA_DIR = './shab_data'
