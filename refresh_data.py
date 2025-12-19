@@ -13,14 +13,8 @@ from bfs_pxweb import fetch_udemo, CANTON_ABBR_TO_LABEL
 from plots import generate_plots
 from parquet_utils import acquire_lock, safe_write_parquet_atomic
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout)
-    ]
-)
+from logging_setup import configure_logging
+
 logger = logging.getLogger("refresh_data")
 
 SHAB_DATA_DIR = './shab_data'
@@ -129,4 +123,5 @@ def main():
         sys.exit(1)
 
 if __name__ == "__main__":
+    configure_logging(level="INFO", log_file="refresh.log")
     main()

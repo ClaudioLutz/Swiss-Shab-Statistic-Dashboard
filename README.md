@@ -2,6 +2,43 @@
 
 A Flask-based application that retrieves, analyzes, and visualizes data from the [Swiss Official Gazette of Commerce (SHAB / SOGC)](https://amtsblattportal.ch). This tool tracks commercial registry publications—specifically new entries (HR01) and deletions (HR03)—over the last three years, providing insights into business trends across different Swiss cantons.
 
+The primary workflow is:
+
+1. **Refresh artifacts** (downloads + caches + generates plots)
+2. **Run Flask** (serves already-generated artifacts)
+
+## Quickstart
+
+### Prerequisites
+- Python 3.11 (recommended)
+- pipenv
+
+### Install
+pipenv --python 3.11
+pipenv install
+
+### Refresh data and generate artifacts
+pipenv run python refresh_data.py
+
+### Run the dashboard
+pipenv run python flask_seaborn.py
+# or:
+# pipenv run flask --app flask_seaborn run
+
+## Generated artifacts
+
+The refresh step writes:
+- SHAB daily cache: `shab_data/shab-YYYY-MM-DD.parquet`
+- Aggregated cache: `shab_data/last_df.parquet`
+- Optional merged UDEMO dataset: (e.g.) `shab_data/udemo_merged.parquet`
+- Plots:
+  - `static/LineGraph.png`
+  - `static/FacetGridKanton.png`
+- Refresh metadata:
+  - `static/status.json`
+
+The Flask app serves these artifacts and does not download/process SHAB data during HTTP requests.
+
 ## Features
 
 - **Automated Data Retrieval**: Downloads daily publication data (XML) directly from the SHAB API.
@@ -10,44 +47,6 @@ A Flask-based application that retrieves, analyzes, and visualizes data from the
   - **Trend Analysis**: A line graph displaying the volume of new entries vs. deletions over time.
   - **Geographic Breakdown**: A facet grid showing publication trends broken down by canton.
 - **Web Dashboard**: A simple web interface to view the generated visualizations.
-
-## Prerequisites
-
-- **Python**: Version 3.9
-- **Pipenv**: For dependency management. [Install Pipenv](https://pipenv.pypa.io/en/latest/installation/) if you haven't already.
-
-## Installation
-
-1.  **Clone the repository:**
-    ```bash
-    git clone <repository-url>
-    cd <repository-directory>
-    ```
-
-2.  **Install dependencies:**
-    ```bash
-    pipenv install
-    ```
-
-## Usage
-
-1.  **Start the Application:**
-
-    Use Flask to run the application.
-
-    > **Note:** Upon initialization, the application calculates a date range for the last 3 years and attempts to download and process the corresponding SHAB data. **The first run may take a significant amount of time** (potentially several minutes or more) depending on your internet connection, as it fetches daily records. Subsequent runs will use the cached data in the `shab_data/` directory.
-
-    ```bash
-    pipenv run flask --app flask_seaborn run
-    ```
-
-2.  **View the Dashboard:**
-
-    Once the server is running (and data processing is complete), open your web browser and navigate to:
-
-    [http://127.0.0.1:5000/](http://127.0.0.1:5000/)
-
-    You will see the generated visualizations for the requested period.
 
 ## Project Structure
 
