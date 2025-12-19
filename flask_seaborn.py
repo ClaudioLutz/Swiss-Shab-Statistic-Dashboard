@@ -50,12 +50,26 @@ def udemo_vs_shab():
 
 @app.route("/progress")
 def progress():
-    # Return idle/complete based on file existence, or read status.json if we implemented it.
-    # For now, since it's a CLI job, webapp doesn't track progress dynamically.
-    return jsonify({
-        'state': 'idle',
-        'message': 'Use python refresh_data.py to update data.'
-    })
+    # Check if data is ready by verifying plot files exist
+    facet_plot = os.path.join(STATIC_FOLDER, 'FacetGridKanton.png')
+    line_plot = os.path.join(STATIC_FOLDER, 'LineGraph.png')
+    
+    data_ready = os.path.exists(facet_plot) and os.path.exists(line_plot)
+    
+    if data_ready:
+        return jsonify({
+            'state': 'complete',
+            'message': 'Data is ready!',
+            'current': 100,
+            'total': 100
+        })
+    else:
+        return jsonify({
+            'state': 'processing',
+            'message': 'Use python refresh_data.py to update data.',
+            'current': 0,
+            'total': 100
+        })
 
 if __name__ == "__main__":
     app.run(debug=True)

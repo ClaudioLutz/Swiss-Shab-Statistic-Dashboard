@@ -11,8 +11,14 @@ import logging
 import tempfile
 import shutil
 import contextlib
-import fcntl
 import time
+import sys
+
+# Import platform-specific file locking modules
+if sys.platform == 'win32':
+    import msvcrt
+else:
+    import fcntl
 
 # Must be set before any pandas/pyarrow imports in the main modules
 os.environ["PYARROW_IGNORE_TIMEZONE"] = "1"
@@ -134,13 +140,19 @@ def safe_write_parquet_atomic(df, filepath):
 def acquire_lock(lock_file, timeout=60):
     """
     Context manager to acquire a file lock.
+    Works cross-platform (Windows and Unix).
     """
     start_time = time.time()
     lock_fd = open(lock_file, 'w')
     try:
         while True:
             try:
-                fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                if sys.platform == 'win32':
+                    # Windows file locking using msvcrt
+                    msvcrt.locking(lock_fd.fileno(), msvcrt.LK_NBLCK, 1)
+                else:
+                    # Unix file locking using fcntl
+                    fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
                 break
             except (IOError, OSError):
                 if time.time() - start_time >= timeout:
@@ -149,7 +161,12 @@ def acquire_lock(lock_file, timeout=60):
         yield
     finally:
         try:
-            fcntl.flock(lock_fd, fcntl.LOCK_UN)
+            if sys.platform == 'win32':
+                # Unlock on Windows
+                msvcrt.locking(lock_fd.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                # Unlock on Unix
+                fcntl.flock(lock_fd, fcntl.LOCK_UN)
         except Exception:
             pass
         lock_fd.close()
