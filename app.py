@@ -17,7 +17,6 @@ import time
 from parquet_utils import safe_read_parquet, safe_write_parquet_atomic, acquire_lock
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # Constants

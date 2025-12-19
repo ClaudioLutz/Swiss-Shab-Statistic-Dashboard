@@ -4,12 +4,13 @@ import os
 os.environ["PYARROW_IGNORE_TIMEZONE"] = "1"
 
 import logging
+import json
 from flask import Flask, render_template, jsonify, send_from_directory, url_for
 import pandas as pd
 from parquet_utils import safe_read_parquet
+from logging_setup import configure_logging
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
@@ -30,6 +31,15 @@ def home():
         return render_template('loading.html', message="Data not generated yet. Please run 'python refresh_data.py' in the console.")
     
     return render_template('visualisation.html')
+
+@app.get("/api/status")
+def api_status():
+    status_path = os.path.join(app.static_folder, "status.json")
+    if not os.path.exists(status_path):
+        return jsonify({"state": "missing", "message": "status.json not found. Run refresh_data.py."}), 404
+
+    with open(status_path, "r", encoding="utf-8") as f:
+        return jsonify(json.load(f))
 
 @app.route("/api/udemo_vs_shab")
 def udemo_vs_shab():
@@ -72,4 +82,5 @@ def progress():
         })
 
 if __name__ == "__main__":
+    configure_logging(level="INFO", log_file="flask.log")
     app.run(debug=True)
