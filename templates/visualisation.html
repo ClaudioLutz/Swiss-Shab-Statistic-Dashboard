@@ -3,7 +3,7 @@
 <head>
     <style>
         body {
-            font-family: open-sans; 
+            font-family: sans-serif;
             color: white;
             margin: 20px;
             width: 100% ; 
@@ -19,8 +19,7 @@
     <title>Shab-Statistik</title>
 </head>
 <body>
-    <!--<img class="form" src="{{ url_for('visualize') }}">-->
-    <img class="form" src="static/LineGraph.png">
-    <img class="form" src="static/FacetGridKanton.png">
+    <img class="form" src="{{ url_for('static', filename='LineGraph.png') }}" alt="Line Graph">
+    <img class="form" src="{{ url_for('static', filename='FacetGridKanton.png') }}" alt="Facet Grid">
 </body>
 </html>

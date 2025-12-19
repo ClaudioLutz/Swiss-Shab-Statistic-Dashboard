@@ -1,20 +1,12 @@
+
 import os
 # Fix for PyArrow/Pandas compatibility issue - must be set before importing pandas
 os.environ["PYARROW_IGNORE_TIMEZONE"] = "1"
 
-from flask import Flask, send_file, render_template, jsonify
-import io
-import base64
-from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-import matplotlib.pyplot as plt
-import seaborn as sns
-from app import Get_Shab_DF_from_range, grouped_multiple, FacetGridKanton, grouped_multiple_ohne_Kantone, LineGraph
-from bfs_pxweb import fetch_udemo, CANTON_ABBR_TO_LABEL
-from datetime import date, time, timedelta, datetime
-from dateutil.relativedelta import relativedelta
-import pandas as pd
 import logging
-import threading
+from flask import Flask, render_template, jsonify, send_from_directory, url_for
+import pandas as pd
+from parquet_utils import safe_read_parquet
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -22,186 +14,48 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-# Global variable to cache the data
-_data_cache = None
-
-# Global variable to track generation progress
-_generation_status = {
-    'state': 'idle',  # idle, processing, complete, error
-    'current': 0,
-    'total': 0,
-    'message': ''
-}
-
-def update_progress(current, total, message):
-    global _generation_status
-    _generation_status['current'] = current
-    _generation_status['total'] = total
-    _generation_status['message'] = message
-    # logger.info(f"Progress update: {current}/{total} - {message}")
-
-def generate_data_task():
-    global _data_cache, _generation_status
-    
-    try:
-        _generation_status['state'] = 'processing'
-        _generation_status['message'] = 'Starting data generation...'
-        logger.info("Starting data generation process...")
-
-        # Calculate date range
-        given_date = datetime.today().date()
-        end_date = given_date.replace(day=1) - timedelta(days=1)
-        start_date = end_date - relativedelta(years=3)
-        start_date = start_date + timedelta(days=1)
-
-        logger.info(f"Fetching data from {start_date} to {end_date}")
-        _generation_status['message'] = f"Fetching data from {start_date} to {end_date}"
-
-        # Get data
-        # Pass callback to Get_Shab_DF_from_range
-        df = Get_Shab_DF_from_range(start_date, end_date, progress_callback=update_progress)
-        logger.info(f"Successfully fetched {len(df)} records")
-
-        # Process data
-        _generation_status['message'] = "Processing data..."
-        update_progress(100, 100, "Processing data - grouping by month, subrubric, and kanton...")
-        logger.info("Processing data - grouping by month, subrubric, and kanton...")
-        grouped_multiples = grouped_multiple(df)
-
-        # Generate plots
-        _generation_status['message'] = "Generating plots..."
-        update_progress(100, 100, "Generating FacetGrid plot for Kantons...")
-        logger.info("Generating FacetGrid plot for Kantons...")
-        FacetGridKanton(grouped_multiples, start_date, end_date)
-        logger.info("FacetGrid plot saved to ./static/FacetGridKanton.png")
-
-        update_progress(100, 100, "Processing data without Kantons...")
-        logger.info("Processing data without Kantons...")
-        grouped_multiple_ohne_Kanton = grouped_multiple_ohne_Kantone(df)
-
-        update_progress(100, 100, "Generating line graph...")
-        logger.info("Generating line graph...")
-        fig, ax = plt.subplots(figsize=(20,6))
-        ax = sns.set_style(style='darkgrid')
-        sns.lineplot(data=grouped_multiple_ohne_Kanton, x="month", y='count', hue='subrubric')
-        plt.xticks(rotation=60)
-        plt.savefig("./static/LineGraph.png")
-        plt.close()
-        logger.info("Line graph saved to ./static/LineGraph.png")
-
-        # --- New UDEMO integration ---
-        update_progress(100, 100, "Fetching BFS UDEMO data...")
-        logger.info("Fetching BFS UDEMO data...")
-
-        # Prepare SHAB data for merge
-        df_shab = df.copy()
-        df_shab["year"] = pd.to_datetime(df_shab["date"]).dt.year
-        
-        # Only process if we have SHAB data
-        udemo_merged = pd.DataFrame()
-        if not df_shab.empty:
-            shab_year_canton = (
-                df_shab.groupby(["kanton", "year"])
-                       .size()
-                       .reset_index(name="shab_events")
-            )
-
-            years = sorted(shab_year_canton["year"].unique().tolist())
-            
-            # Fetch BFS data (observation: 'Unternehmensneugründungen' as default)
-            # Since 'Total' legal form doesn't exist, we fetch all and sum.
-            df_bfs = fetch_udemo(
-                observation_text="Unternehmensneugründungen",
-                years=years,
-                canton_abbrs=None,          # all cantons
-                legal_form_text=None        # fetch all to sum later
-            )
-            
-            # Sum over legal forms to get totals per canton/year
-            # df_bfs columns: Beobachtungseinheit, Kanton, Rechtsform, Jahr, value
-            df_bfs_agg = df_bfs.groupby(["Jahr", "Kanton"], as_index=False)["value"].sum()
-            
-            # Rename for merge
-            df_bfs_agg = df_bfs_agg.rename(columns={"Jahr": "year", "Kanton": "kanton_name", "value": "bfs_births"})
-            
-            # Convert BFS canton names back to abbreviations
-            name_to_abbr = {v: k for k, v in CANTON_ABBR_TO_LABEL.items()}
-            # Note: The API returns specific labels we mapped in bfs_pxweb.py
-            # If there's a mismatch, map() will produce NaNs.
-            df_bfs_agg["kanton"] = df_bfs_agg["kanton_name"].map(name_to_abbr)
-            
-            # Ensure types match
-            df_bfs_agg["year"] = df_bfs_agg["year"].astype(int)
-            shab_year_canton["year"] = shab_year_canton["year"].astype(int)
-            
-            udemo_merged = shab_year_canton.merge(
-                df_bfs_agg[["kanton", "year", "bfs_births"]],
-                on=["kanton", "year"],
-                how="left"
-            )
-            logger.info(f"Merged BFS data: {len(udemo_merged)} rows.")
-
-        # Cache the data
-        _data_cache = {
-            'df': df,
-            'grouped_multiples': grouped_multiples,
-            'grouped_multiple_ohne_Kanton': grouped_multiple_ohne_Kanton,
-            'start_date': start_date,
-            'end_date': end_date,
-            'udemo_merged': udemo_merged
-        }
-
-        _generation_status['state'] = 'complete'
-        _generation_status['message'] = 'Data generation complete!'
-        logger.info("Data generation complete! Application ready.")
-
-    except Exception as e:
-        logger.error(f"Error generating data: {str(e)}")
-        _generation_status['state'] = 'error'
-        _generation_status['message'] = f"Error: {str(e)}"
+SHAB_DATA_DIR = './shab_data'
+UDEMO_MERGED_FILE = os.path.join(SHAB_DATA_DIR, 'udemo_merged.parquet')
+STATIC_FOLDER = './static'
 
 @app.route("/")
 def home():
-    global _data_cache, _generation_status
+    # Check if artifacts exist
+    facet_plot = os.path.join(STATIC_FOLDER, 'FacetGridKanton.png')
+    line_plot = os.path.join(STATIC_FOLDER, 'LineGraph.png')
     
-    # If data is ready, show it
-    if _data_cache is not None:
-        logger.info("Rendering visualisation.html")
-        return render_template('visualisation.html')
+    data_ready = os.path.exists(facet_plot) and os.path.exists(line_plot)
     
-    # If not ready, check if processing
-    if _generation_status['state'] == 'processing':
-        return render_template('loading.html')
-
-    # If completed but cache is None (should not happen normally unless restarted and cache lost but status remained? No variables reset on restart)
-    # Actually if we restart the server, variables reset.
-    # So if state is idle, or complete (but cache lost), or error, restart.
+    if not data_ready:
+        return render_template('loading.html', message="Data not generated yet. Please run 'python refresh_data.py' in the console.")
     
-    if _generation_status['state'] == 'idle' or _generation_status['state'] == 'error' or (_generation_status['state'] == 'complete' and _data_cache is None):
-        # Start background thread
-        thread = threading.Thread(target=generate_data_task)
-        thread.daemon = True
-        thread.start()
-        return render_template('loading.html')
-
-    return render_template('loading.html')
-
-@app.route("/progress")
-def progress():
-    return jsonify(_generation_status)
+    return render_template('visualisation.html')
 
 @app.route("/api/udemo_vs_shab")
 def udemo_vs_shab():
-    global _data_cache
-    if _data_cache is None or 'udemo_merged' not in _data_cache:
+    if not os.path.exists(UDEMO_MERGED_FILE):
         return jsonify({"error": "Data not ready"}), 503
     
-    # Check for NaN in the dataframe before converting to JSON
-    df = _data_cache['udemo_merged']
-    # Replace NaN with null (None) for JSON compatibility
-    records = df.where(pd.notnull(df), None).to_dict(orient="records")
-    return jsonify(records)
+    try:
+        df = safe_read_parquet(UDEMO_MERGED_FILE)
+        if df is None:
+             return jsonify({"error": "Failed to read data"}), 500
 
-@app.route("/visualize")
-def visualize():
-    return None
+        # Replace NaN with null (None) for JSON compatibility
+        records = df.where(pd.notnull(df), None).to_dict(orient="records")
+        return jsonify(records)
+    except Exception as e:
+        logger.error(f"Error reading merged data: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/progress")
+def progress():
+    # Return idle/complete based on file existence, or read status.json if we implemented it.
+    # For now, since it's a CLI job, webapp doesn't track progress dynamically.
+    return jsonify({
+        'state': 'idle',
+        'message': 'Use python refresh_data.py to update data.'
+    })
+
+if __name__ == "__main__":
+    app.run(debug=True)

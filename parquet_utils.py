@@ -1,13 +1,18 @@
 # %%
 """
 Utility module for safe parquet operations.
-Handles PyArrow extension type registration issues that occur with Python 3.13 + pandas 2.3.3 + pyarrow 22.x
+Handles PyArrow extension type registration issues and provides atomic write operations.
 """
 
 import os
 import pandas as pd
 import pyarrow as pa
 import logging
+import tempfile
+import shutil
+import contextlib
+import fcntl
+import time
 
 # Must be set before any pandas/pyarrow imports in the main modules
 os.environ["PYARROW_IGNORE_TIMEZONE"] = "1"
@@ -81,17 +86,26 @@ def safe_read_parquet(filepath):
             raise e
 
 
-def safe_write_parquet(df, filepath):
+def safe_write_parquet_atomic(df, filepath):
     """
-    Safely write a DataFrame to parquet, handling extension type registration errors.
+    Safely and atomically write a DataFrame to parquet.
+    Writes to a temporary file first, then fsyncs and moves it to destination.
     
     Args:
         df: pandas.DataFrame to write
         filepath: Path where to write the parquet file
     """
+    directory = os.path.dirname(filepath)
+    if directory and not os.path.exists(directory):
+        os.makedirs(directory)
+
+    # Create temp file in the same directory to ensure atomic move works
+    fd, temp_path = tempfile.mkstemp(dir=directory, prefix="tmp_shab_", suffix=".parquet")
+    os.close(fd)
+
     try:
         handle_extension_type_registration()
-        df.to_parquet(filepath)
+        df.to_parquet(temp_path)
     except (pa.ArrowKeyError, Exception) as e:
         if "already defined" in str(e):
             logger.warning(f"Extension type already registered, attempting fallback write for {filepath}")
@@ -99,9 +113,43 @@ def safe_write_parquet(df, filepath):
             try:
                 import pyarrow.parquet as pq
                 table = pa.Table.from_pandas(df)
-                pq.write_table(table, filepath)
+                pq.write_table(table, temp_path)
             except Exception as e2:
                 logger.error(f"Fallback parquet write failed: {e2}")
+                os.remove(temp_path)
                 raise e
         else:
+            os.remove(temp_path)
             raise e
+
+    # Atomic move
+    try:
+        os.replace(temp_path, filepath)
+    except OSError:
+        # Fallback for systems where replace might fail across filesystems (shouldn't happen here)
+        os.remove(filepath)
+        shutil.move(temp_path, filepath)
+
+@contextlib.contextmanager
+def acquire_lock(lock_file, timeout=60):
+    """
+    Context manager to acquire a file lock.
+    """
+    start_time = time.time()
+    lock_fd = open(lock_file, 'w')
+    try:
+        while True:
+            try:
+                fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except (IOError, OSError):
+                if time.time() - start_time >= timeout:
+                    raise TimeoutError(f"Could not acquire lock on {lock_file} within {timeout} seconds")
+                time.sleep(0.1)
+        yield
+    finally:
+        try:
+            fcntl.flock(lock_fd, fcntl.LOCK_UN)
+        except Exception:
+            pass
+        lock_fd.close()
