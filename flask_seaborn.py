@@ -22,16 +22,18 @@ STATIC_FOLDER = './static'
 
 @app.route("/")
 def home():
-    # Check if artifacts exist
+    # Check if dashboard data exists
+    data_path = os.path.join(STATIC_FOLDER, 'data', 'shab_monthly.json')
+    
+    if os.path.exists(data_path):
+        return render_template('dashboard.html')
+    
+    # Fallback/Legacy check
     facet_plot = os.path.join(STATIC_FOLDER, 'FacetGridKanton.png')
-    line_plot = os.path.join(STATIC_FOLDER, 'LineGraph.png')
+    if os.path.exists(facet_plot):
+         return render_template('visualisation.html')
     
-    data_ready = os.path.exists(facet_plot) and os.path.exists(line_plot)
-    
-    if not data_ready:
-        return render_template('loading.html', message="Data not generated yet. Please run 'python refresh_data.py' in the console.")
-    
-    return render_template('visualisation.html')
+    return render_template('loading.html', message="Data not generated yet. Please run 'python refresh_data.py' in the console.")
 
 @app.get("/api/status")
 def api_status():

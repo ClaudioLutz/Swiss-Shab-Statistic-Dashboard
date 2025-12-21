@@ -1,0 +1,134 @@
+:root {
+    --bg-color: #f4f6f8;
+    --card-bg: #ffffff;
+    --text-color: #333;
+    --primary-color: #0066cc;
+    --border-color: #e0e0e0;
+    --spacing: 1rem;
+}
+
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+}
+
+.dashboard-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: var(--spacing);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    box-sizing: border-box;
+}
+
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing);
+}
+
+.dashboard-header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.status-display {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.main-layout {
+    display: grid;
+    grid-template-columns: 250px 1fr;
+    gap: var(--spacing);
+    flex: 1;
+    min-height: 0; /* Important for scroll */
+}
+
+.sidebar {
+    background: var(--card-bg);
+    padding: var(--spacing);
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.control-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.button-group {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.button-group button {
+    padding: 0.4rem 0.8rem;
+    border: 1px solid var(--border-color);
+    background: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.button-group button.active {
+    background: var(--primary-color);
+    color: #fff;
+    border-color: var(--primary-color);
+}
+
+select {
+    width: 100%;
+    padding: 0.4rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+
+.charts-area {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing);
+    overflow-y: auto;
+}
+
+.chart-card {
+    background: var(--card-bg);
+    padding: var(--spacing);
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.chart-card h2 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+    color: #555;
+}
+
+.chart-container {
+    flex: 1;
+    min-height: 300px;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .main-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-container {
+        height: auto;
+    }
+}
