@@ -6,6 +6,7 @@ const state = {
     geoMode: "CH", // CH, KT
     selectedCanton: null, // "ZH" etc.
     rangeMonths: 12,
+    compare: false,
     months: [],
     cantons: [],
     data: []
@@ -95,6 +96,16 @@ function initControls() {
         };
         metricContainer.appendChild(btn);
     });
+
+    // View Options (Compare)
+    const compareToggle = document.getElementById("compare-toggle");
+    if (compareToggle) {
+        compareToggle.checked = state.compare;
+        compareToggle.onclick = () => {
+            state.compare = compareToggle.checked;
+            render();
+        };
+    }
 
     // Geo
     const geoContainer = document.getElementById("geo-controls");
@@ -192,52 +203,95 @@ function getEffectiveRange() {
 function render() {
     const { slicedMonths, startIdx } = getEffectiveRange();
 
-    renderTimeSeries(slicedMonths, startIdx);
+    // Time Series gets FULL data (all months) to support slider
+    renderTimeSeries(state.months);
+
+    // Heatmap gets SLICED data (based on sidebar range)
     renderHeatmap(slicedMonths, startIdx);
 }
 
-function renderTimeSeries(months, startIdx) {
+function renderTimeSeries(allMonths) {
     const traces = [];
+    const metricsToPlot = state.compare ? ["HR01", "HR03"] : [state.metric];
 
-    if (state.geoMode === "CH") {
-        const data = indexByCHMetric[state.metric].slice(startIdx);
+    // Default range for initial view (if uirevision allows)
+    // Calculate last N months based on state.rangeMonths
+    const total = allMonths.length;
+    const count = Math.min(total, state.rangeMonths);
+    const start = total - count;
+    // We need dates for range. Assumes 'months' are 'YYYY-MM-DD'
+    const rangeStart = allMonths[start];
+    const rangeEnd = allMonths[total - 1];
+
+    metricsToPlot.forEach(m => {
+        let data;
+        if (state.geoMode === "CH") {
+            data = indexByCHMetric[m];
+        } else {
+            // KT mode
+            const kt = state.selectedCanton;
+            data = indexByKantonMetric[kt][m];
+        }
+
         traces.push({
-            x: months,
+            x: allMonths,
             y: data,
             type: 'scatter',
             mode: 'lines+markers',
-            name: `CH - ${state.metric}`,
+            name: m,
             line: { shape: 'spline', width: 3 },
-            marker: { size: 6 }
+            marker: { size: 6 },
+            hovertemplate: "%{x|%b %Y}<br>" + m + ": %{y:,}<extra></extra>",
         });
-    } else {
-        // KT mode
-        const kt = state.selectedCanton;
-        const data = indexByKantonMetric[kt][state.metric].slice(startIdx);
-        traces.push({
-            x: months,
-            y: data,
-            type: 'scatter',
-            mode: 'lines+markers',
-            name: `${kt} - ${state.metric}`,
-            line: { shape: 'spline', width: 3 },
-            marker: { size: 6 }
-        });
-    }
+    });
+
+    const titleText = state.compare
+        ? `HR01 vs HR03 (${state.geoMode === 'CH' ? 'Switzerland' : state.selectedCanton})`
+        : `Monthly ${state.metric} (${state.geoMode === 'CH' ? 'Switzerland' : state.selectedCanton})`;
 
     const layout = {
-        title: { text: `Monthly ${state.metric} (${state.geoMode === 'CH' ? 'Switzerland' : state.selectedCanton})` },
+        title: { text: titleText },
         margin: { t: 40, r: 20, l: 40, b: 40 },
         hovermode: 'x unified',
         xaxis: {
             automargin: true,
-            fixedrange: true
+            rangeslider: { visible: true },
+            rangeselector: {
+                buttons: [
+                    { count: 6, label: "6m", step: "month", stepmode: "backward" },
+                    { count: 1, label: "1y", step: "year", stepmode: "backward" },
+                    { count: 3, label: "3y", step: "year", stepmode: "backward" },
+                    { step: "all", label: "All" },
+                ],
+            },
+            // Set initial range if we want to respect sidebar state initially
+            // But sidebar state also slices heatmap.
+            // If we set 'range' here, it might override user pan unless we are careful.
+            // Using a new uirevision for range changes might work, or just relying on plotly.
+            // Let's rely on Plotly's default behavior, but maybe set the range if it's a fresh render?
+            // Actually, if we use 'uirevision', Plotly remembers the zoom level.
+            // But if the user *changed* the range in the sidebar, we probably want to update the view.
+            // The sidebar range updates state.rangeMonths, which triggers render().
+            // We can set 'range' here.
+             range: [rangeStart, rangeEnd]
         },
         yaxis: {
             fixedrange: true
         },
-        uirevision: 'ts' // preserve state
+        legend: { itemclick: "toggle", itemdoubleclick: "toggleothers", orientation: "h" },
+        uirevision: 'ts' // preserve state like zoom?
+        // Note: if we bind 'range' above, 'uirevision' might conflict or be ignored for axis.
+        // If we want sidebar changes to update the chart view, we might need to NOT use uirevision for axis,
+        // or update the revision ID.
+        // For now, let's try leaving uirevision. If the range doesn't update when sidebar is clicked,
+        // we might need to change uirevision logic.
     };
+
+    // If the user explicitly changes the sidebar range, we want the chart to zoom to that range.
+    // If we just re-render with the same uirevision, Plotly might keep the OLD zoom.
+    // So we should probably update uirevision when rangeMonths changes.
+    // We remove geoMode and selectedCanton from the key so zoom is preserved when switching views.
+    layout.uirevision = `ts-${state.rangeMonths}`;
 
     const config = { responsive: true, displayModeBar: false };
 
@@ -247,31 +301,62 @@ function renderTimeSeries(months, startIdx) {
 function renderHeatmap(months, startIdx) {
     // Z matrix: rows = cantons, cols = months
     const z = [];
+    let globalMin = Infinity;
+    let globalMax = -Infinity;
 
-    // Sort cantons? Alphabetical is fine for now
-    // Maybe we want to sort by total volume? Let's stick to alphabetical.
-    const cantons = state.cantons;
+    // Sort cantons by total volume in the visible range
+    // Create a list of objects { kt, row, total }
+    const rowsData = [];
 
-    cantons.forEach(kt => {
+    state.cantons.forEach(kt => {
         const row = indexByKantonMetric[kt][state.metric].slice(startIdx);
-        z.push(row);
+        const sum = row.reduce((a, b) => a + b, 0);
+
+        // Update global min/max
+        row.forEach(v => {
+            if (v < globalMin) globalMin = v;
+            if (v > globalMax) globalMax = v;
+        });
+
+        rowsData.push({ kt, row, sum });
     });
 
+    // Sort descending by sum
+    rowsData.sort((a, b) => b.sum - a.sum);
+
+    const sortedCantons = rowsData.map(d => d.kt);
+    const sortedZ = rowsData.map(d => d.row);
+
+    // Handle case with no data
+    if (globalMin === Infinity) { globalMin = 0; globalMax = 0; }
+
     const trace = {
-        z: z,
+        z: sortedZ,
         x: months,
-        y: cantons,
+        y: sortedCantons,
         type: 'heatmap',
-        colorscale: 'Blues',
+        colorscale: state.metric === 'NET' ? 'RdBu' : 'Blues',
+        zmin: globalMin,
+        zmax: globalMax,
         hovertemplate: 'Canton: %{y}<br>Month: %{x}<br>Value: %{z}<extra></extra>'
     };
+
+    if (state.metric === 'NET') {
+        trace.zmid = 0;
+        // RdBu: Red (low) to Blue (high).
+        // We want positive NET (growth) -> Blue, negative NET (decline) -> Red.
+        // However, Plotly's RdBu often maps Low->Red, High->Blue.
+        // If the output shows High=Red, we need to reverse.
+        // Based on verification, we need to reverse to get Blue for positive growth.
+        trace.reversescale = true;
+    }
 
     const layout = {
         title: { text: `Heatmap by Canton (${state.metric})` },
         margin: { t: 40, r: 20, l: 40, b: 40 },
         xaxis: { automargin: true, fixedrange: true },
         yaxis: { automargin: true, fixedrange: true, dtick: 1 },
-        uirevision: 'hm'
+        uirevision: `hm-${state.rangeMonths}-${state.metric}`
     };
 
     const config = { responsive: true, displayModeBar: false };
