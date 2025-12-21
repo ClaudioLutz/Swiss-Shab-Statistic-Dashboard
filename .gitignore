@@ -26,3 +26,5 @@ static/status.json
 
 # Temp files
 *.tmp
+static/data/
+static/status.json

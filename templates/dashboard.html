@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SHAB Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <script src="{{ url_for('static', filename='vendor/plotly.min.js') }}"></script>
+</head>
+<body>
+    <div class="dashboard-container">
+        <header class="dashboard-header">
+            <h1>SHAB Analytics Dashboard</h1>
+            <div id="status-display" class="status-display">Loading...</div>
+        </header>
+
+        <div class="main-layout">
+            <aside class="sidebar">
+                <div class="control-group">
+                    <label>Metric</label>
+                    <div class="button-group" id="metric-controls">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Geography</label>
+                    <div class="button-group" id="geo-controls">
+                        <button class="active" data-val="CH">Switzerland (CH)</button>
+                        <button data-val="KT">Cantons (KT)</button>
+                    </div>
+                </div>
+
+                <div class="control-group" id="canton-selector-group" style="display: none;">
+                    <label>Select Canton</label>
+                    <select id="canton-select">
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label>Time Range</label>
+                    <div class="button-group" id="range-controls">
+                        <button data-val="6">6M</button>
+                        <button data-val="12" class="active">1Y</button>
+                        <button data-val="24">2Y</button>
+                        <button data-val="36">3Y</button>
+                        <button data-val="all">All</button>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <p><small>Click on the heatmap to select a canton.</small></p>
+                </div>
+            </aside>
+
+            <main class="charts-area">
+                <div class="chart-card">
+                    <h2>Time Series</h2>
+                    <div id="tsChart" class="chart-container"></div>
+                </div>
+
+                <div class="chart-card">
+                    <h2>Heatmap (Cantons)</h2>
+                    <div id="hmChart" class="chart-container"></div>
+                </div>
+            </main>
+        </div>
+    </div>
+    <script type="module" src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
